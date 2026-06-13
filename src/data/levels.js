@@ -21,8 +21,8 @@ export const LEVELS = [
     cols: 7, rows: 7, timeLimit: 75, targetScore: 3000,
     tileShape: 'rounded', colors: 6,
     obstacles: [],
-    specials: [{ type: 'stripe', chance: 0.04 }],
-    objectives: [{ type: 'score', target: 3000 }],
+    specials: [{ type: 'bomb', chance: 0.04 }],
+    objectives: [{ type: 'score', target: 3000 }, { type: 'color_clear', color: 0, target: 20 }],
     mechanics: [],
   },
   {
@@ -31,7 +31,7 @@ export const LEVELS = [
     tileShape: 'rounded', colors: 6,
     obstacles: [],
     specials: [{ type: 'stripe', chance: 0.05 }, { type: 'bomb', chance: 0.02 }],
-    objectives: [{ type: 'score', target: 5500 }],
+    objectives: [{ type: 'score', target: 5500 }, { type: 'color_clear', color: 2, target: 25 }],
     mechanics: [],
   },
   {
@@ -60,7 +60,7 @@ export const LEVELS = [
     tileShape: 'circle', colors: 6,
     obstacles: [],
     specials: [{ type: 'stripe', chance: 0.06 }, { type: 'rainbow', chance: 0.015 }],
-    objectives: [{ type: 'score', target: 17000 }],
+    objectives: [{ type: 'score', target: 17000 }, { type: 'color_clear', color: 4, target: 30 }],
     mechanics: ['drift'],
   },
   {
@@ -98,7 +98,7 @@ export const LEVELS = [
     tileShape: 'diamond', colors: 5,
     obstacles: [{ type: 'lava', count: 6 }],
     specials: [{ type: 'bomb', chance: 0.05 }, { type: 'stripe', chance: 0.06 }],
-    objectives: [{ type: 'score', target: 52000 }],
+    objectives: [{ type: 'score', target: 52000 }, { type: 'color_clear', color: 0, target: 35 }],
     mechanics: ['lava_reform'],
   },
   {

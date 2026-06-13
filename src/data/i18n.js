@@ -48,6 +48,10 @@ const TRANSLATIONS = {
     level_19: 'Gravity Flip',
     level_20: 'Black Hole Era',
 
+    color_0: 'Ruby', color_1: 'Amber', color_2: 'Topaz',
+    color_3: 'Emerald', color_4: 'Sapphire', color_5: 'Amethyst',
+    objColorClear: 'Clear',
+
     mech_drift:        '🌊 Current',
     mech_fog:          '🌫 Fog',
     mech_lava_reform:  '🔥 Lava',
@@ -108,6 +112,10 @@ const TRANSLATIONS = {
     level_18: '传送门',
     level_19: '引力翻转',
     level_20: '黑洞纪元',
+
+    color_0: '红宝石', color_1: '琥珀', color_2: '黄晶',
+    color_3: '翡翠', color_4: '蓝宝石', color_5: '紫水晶',
+    objColorClear: '消除',
 
     mech_drift:        '🌊洋流',
     mech_fog:          '🌫迷雾',
