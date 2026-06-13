@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { WORLDS, LEVELS } from '../data/levels.js';
+import { t, toggleLang } from '../data/i18n.js';
 
 const W = 480, H = 854;
 const WORLD_COLORS = [0x2ecc71, 0x3498db, 0xe74c3c, 0x80deea, 0xce93d8];
@@ -28,22 +29,33 @@ export default class LevelSelect extends Phaser.Scene {
   }
 
   _drawHeader() {
-    const backBtn = this.add.text(30, 50, '← 返回', {
+    // Back button
+    this.add.text(24, 50, t('back'), {
       fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#aaaacc',
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    backBtn.on('pointerdown', () => this.scene.start('MainMenu'));
+    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.scene.start('MainMenu'));
 
-    this.add.text(W / 2, 50, '选择关卡', {
-      fontFamily: 'Arial Black, sans-serif', fontSize: '26px', color: '#ffffff',
-      stroke: '#000', strokeThickness: 4,
+    // Title
+    this.add.text(W / 2, 50, t('selectLevel'), {
+      fontFamily: 'Arial Black, sans-serif', fontSize: '26px',
+      color: '#ffffff', stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5);
 
+    // World name
     const wi = this.currentWorld - 1;
-    this.add.text(W / 2, 82, WORLDS[wi].name, {
+    this.add.text(W / 2, 82, t(`world_${this.currentWorld}`), {
       fontFamily: 'Arial, sans-serif', fontSize: '16px',
       color: '#' + WORLD_COLORS[wi].toString(16).padStart(6, '0'),
       letterSpacing: 6,
     }).setOrigin(0.5);
+
+    // Lang toggle
+    const langBtn = this.add.text(W - 16, 16, t('lang'), {
+      fontFamily: 'Arial, sans-serif', fontSize: '15px', fontStyle: 'bold',
+      color: '#ffffff', backgroundColor: '#6c63ff99',
+      padding: { x: 8, y: 4 },
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    langBtn.on('pointerdown', () => { toggleLang(); this.scene.restart({ world: this.currentWorld }); });
   }
 
   _drawWorldTabs() {
@@ -61,12 +73,9 @@ export default class LevelSelect extends Phaser.Scene {
         g.strokeRoundedRect(x - 24, y - 16, 48, 32, 8);
       }
       g.setInteractive(new Phaser.Geom.Rectangle(x-24, y-16, 48, 32), Phaser.Geom.Rectangle.Contains);
-      g.on('pointerdown', () => {
-        this.currentWorld = i + 1;
-        this.scene.restart({ world: i + 1 });
-      });
+      g.on('pointerdown', () => this.scene.restart({ world: i + 1 }));
 
-      this.add.text(x, y, w.name, {
+      this.add.text(x, y, t(`world_${i + 1}`), {
         fontFamily: 'Arial, sans-serif', fontSize: '13px',
         color: active ? '#ffffff' : '#aaaacc',
       }).setOrigin(0.5);
@@ -80,6 +89,8 @@ export default class LevelSelect extends Phaser.Scene {
     const startY = 175;
     const cellW = (W - startX * 2) / cols;
     const cellH = 90;
+    const wi = this.currentWorld - 1;
+    const color = WORLD_COLORS[wi];
 
     worldLevels.forEach((level, i) => {
       const col = i % cols;
@@ -89,11 +100,7 @@ export default class LevelSelect extends Phaser.Scene {
 
       const unlocked = level.id <= (this.save.unlocked || 1);
       const stars    = this.save.stars?.[level.id] || 0;
-      const best     = this.save.scores?.[level.id] || 0;
-      const wi       = this.currentWorld - 1;
-      const color    = WORLD_COLORS[wi];
 
-      // Card
       const g = this.add.graphics();
       g.fillStyle(unlocked ? color : 0x333355, unlocked ? 0.2 : 0.15);
       g.fillRoundedRect(cx - cellW/2 + 6, cy - 36, cellW - 12, 72, 10);
@@ -105,7 +112,7 @@ export default class LevelSelect extends Phaser.Scene {
           new Phaser.Geom.Rectangle(cx - cellW/2 + 6, cy - 36, cellW - 12, 72),
           Phaser.Geom.Rectangle.Contains
         );
-        g.on('pointerover', () => { g.clear(); g.fillStyle(color, 0.4); g.fillRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); g.lineStyle(2,0xffffff,0.6); g.strokeRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); });
+        g.on('pointerover', () => { g.clear(); g.fillStyle(color,0.4); g.fillRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); g.lineStyle(2,0xffffff,0.6); g.strokeRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); });
         g.on('pointerout',  () => { g.clear(); g.fillStyle(color,0.2); g.fillRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); g.lineStyle(2,color,0.6); g.strokeRoundedRect(cx-cellW/2+6,cy-36,cellW-12,72,10); });
         g.on('pointerdown', () => {
           this.tweens.add({ targets: g, scaleX: 0.94, scaleY: 0.94, duration: 80, yoyo: true });
@@ -121,25 +128,20 @@ export default class LevelSelect extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // Level name
-      this.add.text(cx, cy + 6, level.name, {
+      this.add.text(cx, cy + 6, t(`level_${level.id}`), {
         fontFamily: 'Arial, sans-serif', fontSize: '11px',
         color: unlocked ? '#ddddff' : '#555577',
       }).setOrigin(0.5);
 
       // Stars
       if (stars > 0) {
-        const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-        this.add.text(cx, cy + 24, starStr, {
-          fontFamily: 'Arial, sans-serif', fontSize: '14px',
-          color: '#ffd700',
+        this.add.text(cx, cy + 24, '★'.repeat(stars) + '☆'.repeat(3 - stars), {
+          fontFamily: 'Arial, sans-serif', fontSize: '14px', color: '#ffd700',
         }).setOrigin(0.5);
       }
 
-      // Lock icon
       if (!unlocked) {
-        this.add.text(cx, cy + 6, '🔒', {
-          fontSize: '20px',
-        }).setOrigin(0.5);
+        this.add.text(cx, cy + 6, '🔒', { fontSize: '20px' }).setOrigin(0.5);
       }
     });
   }

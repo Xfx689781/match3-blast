@@ -1,0 +1,141 @@
+const TRANSLATIONS = {
+  en: {
+    play: 'Play',
+    back: '← Back',
+    retry: 'Retry',
+    nextLevel: 'Next Level →',
+    levels: 'Levels',
+    lang: '中文',
+    subtitle: '& MATCH',
+    worldsPreview: '5 Worlds  ·  20 Levels',
+    selectLevel: 'Select Level',
+    score: 'Score',
+    target: 'Target',
+    time: 'Time',
+    noMoves: 'No match — swapped back!',
+    shuffle: 'Shuffling...',
+    gravityFlip: 'Gravity Flipped!',
+    drift: 'Current Shift!',
+    blizzard: '❄ Ice Block Incoming!',
+    blackHole: '⚫ Black Hole Pulls!',
+    win: 'Level Clear!',
+    lose: "Time's Up!",
+
+    world_1: 'Forest',
+    world_2: 'Ocean',
+    world_3: 'Volcano',
+    world_4: 'Glacier',
+    world_5: 'Space',
+
+    level_1:  'Forest Awakening',
+    level_2:  'Canopy Maze',
+    level_3:  'Ancient Eruption',
+    level_4:  'Forest Storm',
+    level_5:  'Coral Bay',
+    level_6:  'Ocean Current',
+    level_7:  'Deep Whirlpool',
+    level_8:  'Dark Abyss',
+    level_9:  'Lava Prelude',
+    level_10: 'Magma Surge',
+    level_11: 'Chain Blast',
+    level_12: 'Inferno',
+    level_13: 'Arctic Expanse',
+    level_14: 'Polar Drift',
+    level_15: 'Moving Iceberg',
+    level_16: 'Blizzard',
+    level_17: 'Star Odyssey',
+    level_18: 'Portals',
+    level_19: 'Gravity Flip',
+    level_20: 'Black Hole Era',
+
+    mech_drift:        '🌊 Current',
+    mech_fog:          '🌫 Fog',
+    mech_lava_reform:  '🔥 Lava',
+    mech_chain_bonus:  '⚡ Chain Bonus',
+    mech_burn:         '💨 Burn',
+    mech_ice_shift:    '🧊 Ice Shift',
+    mech_blizzard:     '❄ Blizzard',
+    mech_dark_bg:      '🌑 Dark Zone',
+    mech_portals:      '🌀 Portals',
+    mech_gravity_flip: '🔄 Gravity',
+    mech_black_hole:   '⚫ Black Hole',
+  },
+  zh: {
+    play: '开始游戏',
+    back: '← 返回',
+    retry: '再试一次',
+    nextLevel: '下一关 →',
+    levels: '选关',
+    lang: 'EN',
+    subtitle: '& MATCH',
+    worldsPreview: '5 个世界 · 20 关卡',
+    selectLevel: '选择关卡',
+    score: '得分',
+    target: '目标',
+    time: '时间',
+    noMoves: '没有消除，换回去了！',
+    shuffle: '洗牌中…',
+    gravityFlip: '重力偏转！',
+    drift: '洋流推移！',
+    blizzard: '❄ 新冰块降临！',
+    blackHole: '⚫ 黑洞吸引！',
+    win: '关卡完成！',
+    lose: '时间到！',
+
+    world_1: '森林',
+    world_2: '海洋',
+    world_3: '火山',
+    world_4: '冰川',
+    world_5: '星空',
+
+    level_1:  '林间初醒',
+    level_2:  '树冠迷踪',
+    level_3:  '古树爆发',
+    level_4:  '森林风暴',
+    level_5:  '珊瑚海湾',
+    level_6:  '洋流漂移',
+    level_7:  '深海漩涡',
+    level_8:  '幽暗深渊',
+    level_9:  '熔岩序幕',
+    level_10: '熔核涌现',
+    level_11: '连环爆破',
+    level_12: '烈焰地狱',
+    level_13: '冰原初探',
+    level_14: '极地寒流',
+    level_15: '移动冰山',
+    level_16: '暴风雪',
+    level_17: '星际迷航',
+    level_18: '传送门',
+    level_19: '引力翻转',
+    level_20: '黑洞纪元',
+
+    mech_drift:        '🌊洋流',
+    mech_fog:          '🌫迷雾',
+    mech_lava_reform:  '🔥熔岩',
+    mech_chain_bonus:  '⚡连击',
+    mech_burn:         '💨灼烧',
+    mech_ice_shift:    '🧊移冰',
+    mech_blizzard:     '❄暴风雪',
+    mech_dark_bg:      '🌑暗域',
+    mech_portals:      '🌀传送',
+    mech_gravity_flip: '🔄重力',
+    mech_black_hole:   '⚫黑洞',
+  },
+};
+
+export function getLang() {
+  return localStorage.getItem('blastLang') || 'en';
+}
+
+export function setLang(lang) {
+  localStorage.setItem('blastLang', lang);
+}
+
+export function toggleLang() {
+  setLang(getLang() === 'en' ? 'zh' : 'en');
+}
+
+export function t(key) {
+  const lang = getLang();
+  return TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS['en']?.[key] ?? key;
+}
