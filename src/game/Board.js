@@ -87,7 +87,9 @@ export class Board {
     const t = new Tile(color, TYPE.NORMAL);
     for (const s of specials) {
       if (Math.random() < (s.chance || 0)) {
-        t.type = s.type; // keeps the color!
+        t.type = s.type === 'stripe'
+          ? (Math.random() < 0.5 ? TYPE.STRIPE_H : TYPE.STRIPE_V)
+          : s.type;
         return t;
       }
     }
@@ -315,14 +317,13 @@ export class Board {
 
   applyGravity() {
     const moves = [];
-    if (this.gravityDir === 'down' || this.gravityDir === 'up') {
-      const step = this.gravityDir === 'down' ? -1 : 1;
-      const startR = this.gravityDir === 'down' ? this.rows - 1 : 0;
-      const endR   = this.gravityDir === 'down' ? -1 : this.rows;
+    const goingUp = this.gravityDir === 'up';
 
-      for (let c = 0; c < this.cols; c++) {
-        let empty = startR;
-        for (let r = startR; r !== endR; r -= step) {
+    for (let c = 0; c < this.cols; c++) {
+      if (!goingUp) {
+        // Downward gravity: scan bottom→top, fill lowest empty slot
+        let empty = this.rows - 1;
+        for (let r = this.rows - 1; r >= 0; r--) {
           const t = this.cells[r][c];
           if (t && t.isMovable()) {
             if (empty !== r) {
@@ -330,9 +331,25 @@ export class Board {
               this.cells[empty][c] = t;
               this.cells[r][c] = null;
             }
-            empty -= step;
+            empty--;
           } else if (t && !t.isMovable()) {
-            empty = r - step;
+            empty = r - 1;
+          }
+        }
+      } else {
+        // Upward gravity: scan top→bottom, fill highest empty slot
+        let empty = 0;
+        for (let r = 0; r < this.rows; r++) {
+          const t = this.cells[r][c];
+          if (t && t.isMovable()) {
+            if (empty !== r) {
+              moves.push({ fromR: r, fromC: c, toR: empty, toC: c });
+              this.cells[empty][c] = t;
+              this.cells[r][c] = null;
+            }
+            empty++;
+          } else if (t && !t.isMovable()) {
+            empty = r + 1;
           }
         }
       }
