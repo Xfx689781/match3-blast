@@ -44,7 +44,7 @@ export default class Game extends Phaser.Scene {
     this.boardW = cols * this.STEP - this.GAP;
     this.boardH = rows * this.STEP - this.GAP;
     this.boardX = (W - this.boardW) / 2;
-    this.boardY = 162 + Math.floor((H - 162 - 80 - this.boardH) / 2);
+    this.boardY = 148 + Math.floor((H - 148 - 20 - this.boardH) / 2);
   }
 
   _tilePos(r, c) {
@@ -159,61 +159,29 @@ export default class Game extends Phaser.Scene {
     }).setDepth(5).setOrigin(1, 0).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => { toggleLang(); this.scene.restart({ levelId: this.levelId }); });
 
-    // Score
-    const py = 50;
-    this._uiCard(this.boardX, py, 115, 50);
+    // Score (left card)
+    const py = 48;
+    this._uiCard(this.boardX, py, 118, 46);
     this.add.text(this.boardX + 8, py + 4, t('score'), {
       fontFamily: 'Arial, sans-serif', fontSize: '11px', color: '#7799cc',
     }).setDepth(5);
-    this.scoreTxt = this.add.text(this.boardX + 8, py + 20, '0', {
+    this.scoreTxt = this.add.text(this.boardX + 8, py + 19, '0', {
       fontFamily: 'Arial Black, sans-serif', fontSize: '20px',
       color: '#ffffff', stroke: '#000', strokeThickness: 3,
     }).setDepth(5);
 
-    // Timer
-    this._uiCard(this.boardX + this.boardW - 115, py, 115, 50);
+    // Timer (right card)
+    this._uiCard(this.boardX + this.boardW - 118, py, 118, 46);
     this.add.text(this.boardX + this.boardW - 8, py + 4, t('time'), {
       fontFamily: 'Arial, sans-serif', fontSize: '11px', color: '#7799cc',
     }).setDepth(5).setOrigin(1, 0);
-    this.timeTxt = this.add.text(this.boardX + this.boardW - 8, py + 20, this._fmtTime(this.timeLeft), {
+    this.timeTxt = this.add.text(this.boardX + this.boardW - 8, py + 19, this._fmtTime(this.timeLeft), {
       fontFamily: 'Arial Black, sans-serif', fontSize: '20px',
       color: '#ffffff', stroke: '#000', strokeThickness: 3,
     }).setDepth(5).setOrigin(1, 0);
 
-    // Target
-    this._uiCard(this.boardX + 125, py, this.boardW - 250, 50);
-    this.add.text(W / 2, py + 4, t('target'), {
-      fontFamily: 'Arial, sans-serif', fontSize: '11px', color: '#7799cc',
-    }).setDepth(5).setOrigin(0.5, 0);
-    this.add.text(W / 2, py + 20, this.levelDef.targetScore.toLocaleString(), {
-      fontFamily: 'Arial Black, sans-serif', fontSize: '16px',
-      color: '#' + wc.toString(16).padStart(6, '0'),
-    }).setDepth(5).setOrigin(0.5, 0);
-
-    // Progress bar
-    const barY = 116;
-    const barBg = this.add.graphics().setDepth(5);
-    barBg.fillStyle(0x111133, 1);
-    barBg.fillRoundedRect(this.boardX, barY, this.boardW, 11, 5);
-    this.progressBar = this.add.graphics().setDepth(5);
-    this.progressMeta = { x: this.boardX, y: barY, w: this.boardW, color: wc };
-    this._updateProgressBar();
-
-    // Objectives
+    // Objectives at top (between score row and board)
     this._buildObjDisplay();
-
-    // Mechanic badges
-    let bx2 = this.boardX;
-    for (const m of (this.levelDef.mechanics || [])) {
-      const label = t(`mech_${m}`);
-      if (!label || label === `mech_${m}`) continue;
-      const txt = this.add.text(bx2, H - 18, label, {
-        fontFamily: 'Arial, sans-serif', fontSize: '11px',
-        color: '#8888bb', backgroundColor: '#11113388',
-        padding: { x: 5, y: 2 },
-      }).setDepth(5);
-      bx2 += txt.width + 8;
-    }
   }
 
   _uiCard(x, y, w, h) {
@@ -225,50 +193,74 @@ export default class Game extends Phaser.Scene {
   }
 
   _buildObjDisplay() {
-    const colorObjs = (this.levelDef.objectives || []).filter(o => o.type === 'color_clear');
-    const iceObjs   = (this.levelDef.objectives || []).filter(o => o.type === 'break_ice');
-    const all = [...colorObjs, ...iceObjs];
-    if (!all.length) return;
+    const objs = (this.levelDef.objectives || []).filter(o => o.type !== 'score');
+    if (!objs.length) return;
 
     this.objDisplays = [];
-    const segW = this.boardW / all.length;
-    const y = H - 62;
+    const n    = objs.length;
+    const cardH = 40;
+    const cardY = 100;
+    const gap   = 5;
+    const totalW = this.boardW;
+    const segW  = (totalW - gap * (n - 1)) / n;
+    const wi    = this.levelDef.world - 1;
 
-    all.forEach((obj, i) => {
-      const cx = this.boardX + i * segW + segW / 2;
-      const g = this.add.graphics().setDepth(5);
-      g.fillStyle(0x000000, 0.32);
-      g.fillRoundedRect(cx - segW / 2 + 6, y - 2, segW - 12, 40, 8);
+    objs.forEach((obj, i) => {
+      const cardX = this.boardX + i * (segW + gap);
 
-      const emoji = obj.type === 'color_clear' ? (COLOR_EMOJIS[obj.color] || '🎯') : '❄';
-      this.add.text(cx - 14, y + 10, emoji, { fontSize: '20px' }).setDepth(5).setOrigin(0.5);
-      const txt = this.add.text(cx + 8, y + 10, `0/${obj.target}`, {
+      // Card bg
+      const bg = this.add.graphics().setDepth(5);
+      bg.fillStyle(0x000000, 0.38);
+      bg.fillRoundedRect(cardX, cardY, segW, cardH, 8);
+      bg.lineStyle(1, 0xffffff, 0.07);
+      bg.strokeRoundedRect(cardX, cardY, segW, cardH, 8);
+
+      // Icon
+      const emoji = obj.type === 'tiles_clear' ? '💎'
+                  : obj.type === 'color_clear'  ? (COLOR_EMOJIS[obj.color] || '🎯')
+                  : '❄';
+      this.add.text(cardX + 10, cardY + cardH / 2, emoji, { fontSize: '19px' })
+        .setDepth(5).setOrigin(0, 0.5);
+
+      // Count text (right side)
+      const txt = this.add.text(cardX + segW - 8, cardY + 11, `0/${obj.target}`, {
         fontFamily: 'Arial Black, sans-serif', fontSize: '14px',
         color: '#ffffff', stroke: '#000', strokeThickness: 2,
-      }).setDepth(5).setOrigin(0, 0.5);
+      }).setDepth(5).setOrigin(1, 0);
 
-      this.objDisplays.push({ ...obj, txt });
+      // Progress bar
+      const barX = cardX + 5;
+      const barY = cardY + cardH - 9;
+      const barW = segW - 10;
+      const bgBar = this.add.graphics().setDepth(5);
+      bgBar.fillStyle(0x112244, 1);
+      bgBar.fillRoundedRect(barX, barY, barW, 6, 3);
+      const bar = this.add.graphics().setDepth(5);
+      const barColor = obj.type === 'color_clear'
+        ? TILE_COLORS[obj.color]?.base ?? WORLD_COLORS[wi]
+        : WORLD_COLORS[wi];
+
+      this.objDisplays.push({ ...obj, txt, bar, barX, barY, barW, barColor });
     });
   }
 
   _updateObjDisplays() {
     if (!this.objDisplays) return;
+    const total = this.colorCleared.reduce((a, b) => a + b, 0);
     for (const d of this.objDisplays) {
-      const cur = d.type === 'color_clear' ? (this.colorCleared[d.color] || 0) : this.icesBroken;
+      const cur = d.type === 'tiles_clear'  ? total
+                : d.type === 'color_clear'  ? (this.colorCleared[d.color] || 0)
+                : this.icesBroken;
+      const pct = Math.min(cur / d.target, 1);
       d.txt.setText(`${Math.min(cur, d.target)}/${d.target}`);
       d.txt.setColor(cur >= d.target ? '#ffd700' : '#ffffff');
-    }
-  }
-
-  _updateProgressBar() {
-    const { x, y, w, color } = this.progressMeta;
-    const pct = Math.min(this.score / this.levelDef.targetScore, 1);
-    this.progressBar.clear();
-    if (pct > 0) {
-      this.progressBar.fillStyle(color, 0.85);
-      this.progressBar.fillRoundedRect(x, y, w * pct, 11, 5);
-      this.progressBar.fillStyle(0xffffff, 0.2);
-      this.progressBar.fillRoundedRect(x + 2, y + 2, Math.max(0, w * pct - 4), 4, 2);
+      d.bar.clear();
+      if (pct > 0) {
+        d.bar.fillStyle(d.barColor, 0.9);
+        d.bar.fillRoundedRect(d.barX, d.barY, d.barW * pct, 6, 3);
+        d.bar.fillStyle(0xffffff, 0.18);
+        d.bar.fillRoundedRect(d.barX + 1, d.barY + 1, Math.max(0, d.barW * pct - 2), 2, 1);
+      }
     }
   }
 
@@ -331,21 +323,13 @@ export default class Game extends Phaser.Scene {
     }
 
     if (fromAbove) {
-      // Animate from just above the board, staggered by column
       const targetY = g.y;
       g.y = this.boardY - size - 6;
       g.setAlpha(0);
-      const delay = c * 22;
-      this.tweens.add({
-        targets: g,
-        y: targetY, alpha: 1,
-        duration: 260 + r * 18,
-        delay,
-        ease: 'Bounce.easeOut',
-      });
+      this.tweens.add({ targets: g, y: targetY, alpha: 1, duration: 200, ease: 'Bounce.easeOut' });
       if (badge) {
         badge.setAlpha(0);
-        this.tweens.add({ targets: badge, alpha: 1, duration: 180, delay: delay + 120 });
+        this.tweens.add({ targets: badge, alpha: 1, duration: 130, delay: 70 });
       }
     }
   }
@@ -679,7 +663,6 @@ export default class Game extends Phaser.Scene {
       for (let i = 0; i < 6; i++) this.colorCleared[i] += result.colorsCleared[i] || 0;
 
       this.scoreTxt.setText(this.score.toLocaleString());
-      this._updateProgressBar();
       this._updateObjDisplays();
       this._scorePopup(result.scoreAdd, bonus);
 
@@ -702,12 +685,17 @@ export default class Game extends Phaser.Scene {
       const drops = this.board.applyGravity();
       await this._animDrop(drops);
 
-      // Fill empty cells with new tiles falling from above
-      const newCells = this.board.fillEmpty(this.levelDef.colors || 6);
-      for (const { r, c } of newCells) this._spawnTileObj(r, c, true);
+      // Fill empty board cells, then spawn visuals for ALL cells missing one.
+      // This acts as a safety net: catches both newly filled cells AND any tiles
+      // whose visual was lost during the drop animation.
+      this.board.fillEmpty(this.levelDef.colors || 6);
+      for (let r = 0; r < this.levelDef.rows; r++)
+        for (let c = 0; c < this.levelDef.cols; c++) {
+          if (this.board.get(r, c) && !this.tileObjs[r][c])
+            this._spawnTileObj(r, c, true);
+        }
 
-      // Wait for spawn animations to settle
-      await this._wait(240);
+      await this._wait(260); // must be > spawn animation duration (200ms)
 
       if (this.levelDef.mechanics?.includes('gravity_flip') && this.chain % 3 === 0) {
         this.board.rotateGravity();
@@ -859,8 +847,9 @@ export default class Game extends Phaser.Scene {
   // ── Win / Lose ─────────────────────────────────────────────────────────
 
   _checkWin() {
+    const total = this.colorCleared.reduce((a, b) => a + b, 0);
     const allMet = (this.levelDef.objectives || []).every(obj => {
-      if (obj.type === 'score')       return this.score >= obj.target;
+      if (obj.type === 'tiles_clear') return total >= obj.target;
       if (obj.type === 'break_ice')   return this.icesBroken >= obj.target;
       if (obj.type === 'color_clear') return (this.colorCleared[obj.color] || 0) >= obj.target;
       return true;
@@ -890,9 +879,9 @@ export default class Game extends Phaser.Scene {
   }
 
   _calcStars() {
-    const pct = this.score / this.levelDef.targetScore;
-    if (pct >= 2.0) return 3;
-    if (pct >= 1.3) return 2;
+    const pct = this.timeLeft / this.levelDef.timeLimit;
+    if (pct >= 0.45) return 3;
+    if (pct >= 0.18) return 2;
     return 1;
   }
 
