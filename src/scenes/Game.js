@@ -23,8 +23,9 @@ export default class Game extends Phaser.Scene {
     this.busy         = false;
     this.selected     = null;
     this.tileObjs     = [];
-    this.icesBroken   = 0;
-    this.colorCleared = new Array(6).fill(0);
+    this.icesBroken      = 0;
+    this.colorCleared    = new Array(6).fill(0);
+    this.bombsTriggered  = 0;
 
     this._computeLayout();
     this._drawBg();          // background + animated particles + board panel
@@ -120,6 +121,19 @@ export default class Game extends Phaser.Scene {
     const rim = this.add.graphics().setDepth(2);
     rim.lineStyle(1, 0xffffff, 0.07);
     rim.strokeRoundedRect(bx - 8, by - 8, bw + 16, bh + 16, 14);
+
+    // Inactive cell overlays (board-shape cutouts)
+    if (this.board.inactiveCells.size > 0) {
+      const inactiveG = this.add.graphics().setDepth(2);
+      for (const key of this.board.inactiveCells) {
+        const [ir, ic] = key.split(',').map(Number);
+        const { x, y } = this._tilePos(ir, ic);
+        inactiveG.fillStyle(0x000000, 0.72);
+        inactiveG.fillRoundedRect(x - this.TILE/2 - 1, y - this.TILE/2 - 1, this.TILE + 2, this.TILE + 2, 6);
+        inactiveG.lineStyle(1, 0xffffff, 0.06);
+        inactiveG.strokeRoundedRect(x - this.TILE/2 - 1, y - this.TILE/2 - 1, this.TILE + 2, this.TILE + 2, 6);
+      }
+    }
   }
 
   _drawBoardBorder(alpha) {
@@ -216,8 +230,9 @@ export default class Game extends Phaser.Scene {
       bg.strokeRoundedRect(cardX, cardY, segW, cardH, 8);
 
       // Icon
-      const emoji = obj.type === 'tiles_clear' ? '💎'
-                  : obj.type === 'color_clear'  ? (COLOR_EMOJIS[obj.color] || '🎯')
+      const emoji = obj.type === 'tiles_clear'     ? '💎'
+                  : obj.type === 'color_clear'      ? (COLOR_EMOJIS[obj.color] || '🎯')
+                  : obj.type === 'bombs_triggered'  ? '💣'
                   : '❄';
       this.add.text(cardX + 10, cardY + cardH / 2, emoji, { fontSize: '19px' })
         .setDepth(5).setOrigin(0, 0.5);
@@ -248,8 +263,9 @@ export default class Game extends Phaser.Scene {
     if (!this.objDisplays) return;
     const total = this.colorCleared.reduce((a, b) => a + b, 0);
     for (const d of this.objDisplays) {
-      const cur = d.type === 'tiles_clear'  ? total
-                : d.type === 'color_clear'  ? (this.colorCleared[d.color] || 0)
+      const cur = d.type === 'tiles_clear'    ? total
+                : d.type === 'color_clear'    ? (this.colorCleared[d.color] || 0)
+                : d.type === 'bombs_triggered'? this.bombsTriggered
                 : this.icesBroken;
       const pct = Math.min(cur / d.target, 1);
       d.txt.setText(`${Math.min(cur, d.target)}/${d.target}`);
@@ -288,10 +304,11 @@ export default class Game extends Phaser.Scene {
     this.tileObjs = Array.from({ length: rows }, () => new Array(cols).fill(null));
     for (let r = 0; r < rows; r++)
       for (let c = 0; c < cols; c++)
-        this._spawnTileObj(r, c, false);
+        if (!this.board.isInactive(r, c)) this._spawnTileObj(r, c, false);
   }
 
   _spawnTileObj(r, c, fromAbove = false) {
+    if (this.board.isInactive(r, c)) return;
     const tile = this.board.get(r, c);
     if (!tile) { this.tileObjs[r][c] = null; return; }
 
@@ -628,8 +645,48 @@ export default class Game extends Phaser.Scene {
 
   async _doSwap(r1, c1, r2, c2) {
     this.busy = true;
+
+    const preA = this.board.get(r1, c1);
+    const preB = this.board.get(r2, c2);
+    const isAuto = t => t?.type === TYPE.RAINBOW || t?.type === TYPE.MEGA;
+
     await this._animSwap(r1, c1, r2, c2);
     this.board.swap(r1, c1, r2, c2);
+
+    // RAINBOW or MEGA auto-triggers on any swap — no 3-match needed
+    if (isAuto(preA) || isAuto(preB)) {
+      // After swap: preA is now at (r2,c2), preB is at (r1,c1)
+      const triggers = [];
+      if (isAuto(preA)) triggers.push({ r: r2, c: c2, tile: preA });
+      if (isAuto(preB)) triggers.push({ r: r1, c: c1, tile: preB });
+
+      for (const { r, c, tile } of triggers) {
+        const obj = this.tileObjs[r]?.[c];
+        if (obj?.g) this.tweens.add({ targets: obj.g, scaleX: 1.6, scaleY: 1.6, alpha: 0, duration: 320, ease: 'Power2' });
+      }
+      await this._wait(340);
+
+      for (const { r, c, tile } of triggers) {
+        const result = this.board.triggerAt(r, c);
+        this.score += result.scoreAdd;
+        this.icesBroken += result.icesBroken || 0;
+        if (tile.type === TYPE.BOMB || tile.type === TYPE.MEGA) this.bombsTriggered++;
+        for (let i = 0; i < 6; i++) this.colorCleared[i] += result.colorsCleared[i] || 0;
+        for (const key of result.deleted) {
+          const [dr, dc] = key.split(',').map(Number);
+          const { x, y } = this._tilePos(dr, dc);
+          this._burst(x, y, TILE_COLORS[tile.color ?? 0]?.base ?? 0xffffff, tile.type);
+          this._destroyTileObj(dr, dc);
+        }
+      }
+      this.scoreTxt.setText(this.score.toLocaleString());
+      this._updateObjDisplays();
+      this.chain = 0;
+      await this._cascade();
+      this._checkWin();
+      this.busy = false;
+      return;
+    }
 
     if (this.board.findMatches().length === 0) {
       await this._animSwap(r1, c1, r2, c2);
@@ -660,6 +717,7 @@ export default class Game extends Phaser.Scene {
       const result = this.board.applyMatches(matches, bonus);
       this.score += result.scoreAdd;
       this.icesBroken += result.icesBroken;
+      this.bombsTriggered += result.bombsTriggered || 0;
       for (let i = 0; i < 6; i++) this.colorCleared[i] += result.colorsCleared[i] || 0;
 
       this.scoreTxt.setText(this.score.toLocaleString());
@@ -675,7 +733,7 @@ export default class Game extends Phaser.Scene {
       // Reveal any new special tiles created by the match
       for (let r = 0; r < this.levelDef.rows; r++)
         for (let c = 0; c < this.levelDef.cols; c++) {
-          if (this.board.get(r, c) && !this.tileObjs[r][c])
+          if (!this.board.isInactive(r, c) && this.board.get(r, c) && !this.tileObjs[r][c])
             this._spawnTileObj(r, c, false);
         }
 
@@ -691,7 +749,7 @@ export default class Game extends Phaser.Scene {
       this.board.fillEmpty(this.levelDef.colors || 6);
       for (let r = 0; r < this.levelDef.rows; r++)
         for (let c = 0; c < this.levelDef.cols; c++) {
-          if (this.board.get(r, c) && !this.tileObjs[r][c])
+          if (!this.board.isInactive(r, c) && this.board.get(r, c) && !this.tileObjs[r][c])
             this._spawnTileObj(r, c, true);
         }
 
@@ -713,7 +771,7 @@ export default class Game extends Phaser.Scene {
       for (let r = 0; r < this.levelDef.rows; r++)
         for (let c = 0; c < this.levelDef.cols; c++) {
           this._destroyTileObj(r, c);
-          this._spawnTileObj(r, c, true);
+          if (!this.board.isInactive(r, c)) this._spawnTileObj(r, c, true);
         }
     }
   }
@@ -849,9 +907,10 @@ export default class Game extends Phaser.Scene {
   _checkWin() {
     const total = this.colorCleared.reduce((a, b) => a + b, 0);
     const allMet = (this.levelDef.objectives || []).every(obj => {
-      if (obj.type === 'tiles_clear') return total >= obj.target;
-      if (obj.type === 'break_ice')   return this.icesBroken >= obj.target;
-      if (obj.type === 'color_clear') return (this.colorCleared[obj.color] || 0) >= obj.target;
+      if (obj.type === 'tiles_clear')    return total >= obj.target;
+      if (obj.type === 'break_ice')      return this.icesBroken >= obj.target;
+      if (obj.type === 'color_clear')    return (this.colorCleared[obj.color] || 0) >= obj.target;
+      if (obj.type === 'bombs_triggered')return this.bombsTriggered >= obj.target;
       return true;
     });
     if (allMet) {

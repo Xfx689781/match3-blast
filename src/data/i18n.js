@@ -50,7 +50,7 @@ const TRANSLATIONS = {
 
     color_0: 'Ruby', color_1: 'Amber', color_2: 'Topaz',
     color_3: 'Emerald', color_4: 'Sapphire', color_5: 'Amethyst',
-    objTilesClear: 'Tiles', objColorClear: 'Clear', objBreakIce: 'Ice',
+    objTilesClear: 'Tiles', objColorClear: 'Clear', objBreakIce: 'Ice', objBombsTriggered: 'Bombs',
 
     mech_drift:        '🌊 Current',
     mech_fog:          '🌫 Fog',
@@ -115,7 +115,7 @@ const TRANSLATIONS = {
 
     color_0: '红宝石', color_1: '琥珀', color_2: '黄晶',
     color_3: '翡翠', color_4: '蓝宝石', color_5: '紫水晶',
-    objTilesClear: '方块', objColorClear: '消除', objBreakIce: '冰块',
+    objTilesClear: '方块', objColorClear: '消除', objBreakIce: '冰块', objBombsTriggered: '炸弹',
 
     mech_drift:        '🌊洋流',
     mech_fog:          '🌫迷雾',
