@@ -134,9 +134,9 @@ export class Board {
     return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
   }
 
-  // Special tiles (bomb/stripe/rainbow) match with same-color normal tiles
   _matchable(a, b) {
     if (a.isObstacle() || b.isObstacle()) return false;
+    if (a.type === TYPE.RAINBOW || b.type === TYPE.RAINBOW) return true;
     return a.color === b.color;
   }
 

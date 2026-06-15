@@ -350,35 +350,38 @@ export default class Game extends Phaser.Scene {
     }
   }
 
-  // ── Tile visuals (clean 4-layer jewel) ────────────────────────────────
+  // ── Tile visuals ──────────────────────────────────────────────────────
 
   _renderTile(g, tile, size) {
-    const cs    = TILE_COLORS[tile.color] || TILE_COLORS[0];
     const shape = this.levelDef.tileShape || 'rounded';
     const cx = size / 2, cy = size / 2;
     const r  = size * 0.42;
 
-    // 1. Drop shadow
+    if (tile.type === TYPE.RAINBOW) { this._renderRainbow(g, cx, cy, r); return; }
+    if (tile.type === TYPE.MEGA)    { this._renderMega(g, cx, cy, r); return; }
+    if (tile.type === TYPE.BOMB)    { this._renderBomb(g, tile, cx, cy, r); return; }
+    if (tile.type === TYPE.STRIPE_H || tile.type === TYPE.STRIPE_V) {
+      this._renderStripe(g, tile, cx, cy, r, shape, tile.type === TYPE.STRIPE_V);
+      return;
+    }
+
+    const cs = TILE_COLORS[tile.color] || TILE_COLORS[0];
+
     g.fillStyle(0x000000, 0.32);
     this._fillShape(g, cx + 2, cy + 4, r, shape);
 
-    // 2. Dark outer body → creates border/rim effect
     g.fillStyle(cs.dark, 1);
     this._fillShape(g, cx, cy, r, shape);
 
-    // 3. Main color face (slightly raised)
     g.fillStyle(cs.base, 1);
     this._fillShape(g, cx - 1, cy - 2, r * 0.9, shape);
 
-    // 4. Top highlight — ellipse blends naturally without clipping
     g.fillStyle(cs.light, 0.55);
     g.fillEllipse(cx - 1, cy - r * 0.22, r * 1.72, r * 1.08);
 
-    // 5. Specular dot (bright glint, top-left)
     g.fillStyle(0xffffff, 0.7);
     g.fillEllipse(cx - r * 0.27, cy - r * 0.31, r * 0.46, r * 0.27);
 
-    // Ice crack overlay
     if (tile.type === TYPE.ICE && tile.iceHp === 1) {
       g.lineStyle(1.5, 0xffffff, 0.7);
       g.beginPath();
@@ -388,6 +391,145 @@ export default class Game extends Phaser.Scene {
       g.lineTo(cx - r*0.28, cy + r*0.38);
       g.strokePath();
     }
+  }
+
+  // Rainbow: multicolor pie wheel — wildcard, matches any color
+  _renderRainbow(g, cx, cy, r) {
+    const arc = [0xff3333, 0xff9900, 0xffee00, 0x33cc33, 0x3388ff, 0xcc44ff];
+
+    g.fillStyle(0x000000, 0.3);
+    g.fillCircle(cx + 2, cy + 4, r);
+
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle(arc[i], 1);
+      const a0 = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const a1 = ((i + 1) / 6) * Math.PI * 2 - Math.PI / 2;
+      const pts = [new Phaser.Geom.Point(cx, cy)];
+      for (let s = 0; s <= 9; s++) {
+        const a = a0 + (a1 - a0) * s / 9;
+        pts.push(new Phaser.Geom.Point(cx + r * Math.cos(a), cy + r * Math.sin(a)));
+      }
+      g.fillPoints(pts, true);
+    }
+
+    g.lineStyle(2, 0x111111, 0.75);
+    g.strokeCircle(cx, cy, r);
+
+    g.lineStyle(1, 0x000000, 0.3);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      g.strokePath();
+    }
+
+    g.fillStyle(0xffffff, 0.92);
+    g.fillCircle(cx, cy, r * 0.18);
+
+    g.fillStyle(0xffffff, 0.48);
+    g.fillEllipse(cx - r * 0.23, cy - r * 0.3, r * 0.37, r * 0.21);
+  }
+
+  // Mega: solid gold 5-pointed star — clears whole board on match
+  _renderMega(g, cx, cy, r) {
+    const pts = (ox, oy, rad, inner) => Array.from({ length: 10 }, (_, i) => {
+      const a  = (Math.PI / 5) * i - Math.PI / 2;
+      const ro = i % 2 === 0 ? rad : rad * inner;
+      return new Phaser.Geom.Point(ox + ro * Math.cos(a), oy + ro * Math.sin(a));
+    });
+
+    g.fillStyle(0x000000, 0.35);
+    g.fillPoints(pts(cx + 2, cy + 4, r, 0.42), true);
+
+    g.fillStyle(0x7a5000, 1);
+    g.fillPoints(pts(cx, cy, r, 0.42), true);
+
+    g.fillStyle(0xffd700, 1);
+    g.fillPoints(pts(cx - 1, cy - 2, r * 0.91, 0.44), true);
+
+    g.fillStyle(0xfffacc, 0.52);
+    g.fillEllipse(cx - 1, cy - r * 0.2, r * 1.55, r * 0.88);
+
+    g.fillStyle(0xffffff, 0.72);
+    g.fillEllipse(cx - r * 0.22, cy - r * 0.32, r * 0.38, r * 0.2);
+  }
+
+  // Bomb: dark ball with color sheen + bent fuse + spark
+  _renderBomb(g, tile, cx, cy, r) {
+    const cs = TILE_COLORS[tile.color] || TILE_COLORS[0];
+
+    g.fillStyle(0x000000, 0.35);
+    g.fillCircle(cx + 2, cy + 4, r);
+
+    g.fillStyle(cs.dark, 1);
+    g.fillCircle(cx, cy, r);
+
+    const dc = this._tint(cs.base, 0.44);
+    g.fillStyle(dc, 1);
+    g.fillCircle(cx - 1, cy - 1, r * 0.87);
+
+    g.fillStyle(cs.base, 0.4);
+    g.fillEllipse(cx - r * 0.22, cy - r * 0.08, r * 1.28, r * 0.88);
+
+    g.fillStyle(0xffffff, 0.62);
+    g.fillEllipse(cx - r * 0.32, cy - r * 0.36, r * 0.36, r * 0.21);
+
+    // Fuse
+    g.lineStyle(2.5, 0x7a4010, 1);
+    g.beginPath();
+    g.moveTo(cx + r * 0.52, cy - r * 0.52);
+    g.lineTo(cx + r * 0.68, cy - r * 0.78);
+    g.lineTo(cx + r * 0.58, cy - r * 0.97);
+    g.strokePath();
+
+    g.fillStyle(0xffcc00, 1);
+    g.fillCircle(cx + r * 0.58, cy - r * 0.97, r * 0.14);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(cx + r * 0.58, cy - r * 0.97, r * 0.07);
+  }
+
+  // Stripe: jewel with 3 glowing energy bars (H or V)
+  _renderStripe(g, tile, cx, cy, r, shape, vertical) {
+    const cs = TILE_COLORS[tile.color] || TILE_COLORS[0];
+    const sw = r * 1.56;
+
+    g.fillStyle(0x000000, 0.32);
+    this._fillShape(g, cx + 2, cy + 4, r, shape);
+
+    g.fillStyle(cs.dark, 1);
+    this._fillShape(g, cx, cy, r, shape);
+
+    g.fillStyle(cs.base, 1);
+    this._fillShape(g, cx - 1, cy - 2, r * 0.9, shape);
+
+    g.fillStyle(cs.light, 0.42);
+    g.fillEllipse(cx - 1, cy - r * 0.22, r * 1.72, r * 1.08);
+
+    if (vertical) {
+      for (const ox of [-r * 0.3, 0, r * 0.3]) {
+        g.fillStyle(0xffffff, 0.5);
+        g.fillRect(cx + ox - r * 0.065, cy - sw / 2, r * 0.13, sw);
+        g.fillStyle(0xffffff, 0.88);
+        g.fillRect(cx + ox - r * 0.025, cy - sw / 2, r * 0.05, sw);
+      }
+    } else {
+      for (const oy of [-r * 0.27, 0, r * 0.27]) {
+        g.fillStyle(0xffffff, 0.5);
+        g.fillRect(cx - sw / 2, cy + oy - r * 0.065, sw, r * 0.13);
+        g.fillStyle(0xffffff, 0.88);
+        g.fillRect(cx - sw / 2, cy + oy - r * 0.025, sw, r * 0.05);
+      }
+    }
+
+    g.fillStyle(0xffffff, 0.65);
+    g.fillEllipse(cx - r * 0.27, cy - r * 0.31, r * 0.46, r * 0.27);
+  }
+
+  _tint(hex, factor) {
+    return ((Math.round(((hex >> 16) & 0xff) * factor) << 16) |
+            (Math.round(((hex >> 8)  & 0xff) * factor) << 8)  |
+             Math.round((hex & 0xff)           * factor));
   }
 
   _fillShape(g, cx, cy, r, shape) {
@@ -431,14 +573,10 @@ export default class Game extends Phaser.Scene {
   }
 
   _iconFor(tile) {
-    if (tile.type === TYPE.BOMB)     return '✸';
-    if (tile.type === TYPE.MEGA)     return '★';
-    if (tile.type === TYPE.STRIPE_H) return '━';
-    if (tile.type === TYPE.STRIPE_V) return '┃';
-    if (tile.type === TYPE.RAINBOW)  return '◈';
-    if (tile.type === TYPE.STONE)    return '▪';
-    if (tile.type === TYPE.ICE)      return tile.iceHp === 2 ? '❄' : '·';
-    if (tile.type === TYPE.LAVA)     return '🔥';
+    // Power specials have their own distinct renders — no badge needed
+    if (tile.type === TYPE.STONE) return '▪';
+    if (tile.type === TYPE.ICE)   return tile.iceHp === 2 ? '❄' : '·';
+    if (tile.type === TYPE.LAVA)  return '🔥';
     return null;
   }
 
