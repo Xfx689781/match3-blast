@@ -361,6 +361,7 @@ export default class Game extends Phaser.Scene {
     if (tile.type === TYPE.RAINBOW) { this._renderRainbow(g, cx, cy, r); return; }
     if (tile.type === TYPE.MEGA)    { this._renderMega(g, cx, cy, r); return; }
     if (tile.type === TYPE.BOMB)    { this._renderBomb(g, tile, cx, cy, r); return; }
+    if (tile.type === TYPE.STONE)   { this._renderStone(g, cx, cy, r); return; }
     if (tile.type === TYPE.STRIPE_H || tile.type === TYPE.STRIPE_V) {
       this._renderStripe(g, tile, cx, cy, r, shape, tile.type === TYPE.STRIPE_V);
       return;
@@ -490,6 +491,75 @@ export default class Game extends Phaser.Scene {
     g.fillCircle(cx + r * 0.58, cy - r * 0.97, r * 0.07);
   }
 
+  // Stone: layered rock with cracks and speckles
+  _renderStone(g, cx, cy, r) {
+    const rr = r * 0.28; // corner radius
+
+    // Drop shadow
+    g.fillStyle(0x000000, 0.42);
+    g.fillRoundedRect(cx - r + 3, cy - r + 5, r * 2, r * 2, rr);
+
+    // Outer rim (darkest edge)
+    g.fillStyle(0x222222, 1);
+    g.fillRoundedRect(cx - r, cy - r, r * 2, r * 2, rr);
+
+    // Main stone body
+    g.fillStyle(0x555555, 1);
+    g.fillRoundedRect(cx - r + 2, cy - r + 2, r * 2 - 4, r * 2 - 4, rr * 0.85);
+
+    // Mid-tone face
+    g.fillStyle(0x717171, 1);
+    g.fillRoundedRect(cx - r + 4, cy - r + 4, r * 2 - 8, r * 2 - 11, rr * 0.7);
+
+    // Light wash (upper-left lit surface)
+    g.fillStyle(0x8e8e8e, 0.65);
+    g.fillEllipse(cx - r * 0.28, cy - r * 0.32, r * 1.18, r * 0.75);
+
+    // Faint specular highlight
+    g.fillStyle(0xffffff, 0.16);
+    g.fillEllipse(cx - r * 0.34, cy - r * 0.44, r * 0.52, r * 0.28);
+
+    // ── Cracks ──────────────────────────────────────────────────────────
+    // Primary diagonal crack
+    g.lineStyle(1.6, 0x2b2b2b, 0.82);
+    g.beginPath();
+    g.moveTo(cx - r * 0.28, cy - r * 0.52);
+    g.lineTo(cx + r * 0.08, cy - r * 0.06);
+    g.lineTo(cx + r * 0.38, cy + r * 0.42);
+    g.strokePath();
+
+    // Branch off the main crack
+    g.lineStyle(1.0, 0x2b2b2b, 0.65);
+    g.beginPath();
+    g.moveTo(cx + r * 0.08, cy - r * 0.06);
+    g.lineTo(cx - r * 0.18, cy + r * 0.14);
+    g.strokePath();
+
+    // Secondary crack (lower-left)
+    g.lineStyle(1.2, 0x333333, 0.55);
+    g.beginPath();
+    g.moveTo(cx - r * 0.52, cy + r * 0.12);
+    g.lineTo(cx - r * 0.14, cy + r * 0.38);
+    g.strokePath();
+
+    // Hairline accent
+    g.lineStyle(0.7, 0x3a3a3a, 0.4);
+    g.beginPath();
+    g.moveTo(cx + r * 0.18, cy - r * 0.38);
+    g.lineTo(cx + r * 0.34, cy - r * 0.08);
+    g.strokePath();
+
+    // ── Speckles ────────────────────────────────────────────────────────
+    g.fillStyle(0x2e2e2e, 0.55);
+    for (const [sx, sy] of [[0.16,-0.22],[-0.3,0.08],[0.32,0.2],[-0.08,0.38],[0.06,-0.4],[-0.22,-0.08],[0.28,-0.14]])
+      g.fillCircle(cx + sx * r, cy + sy * r, r * 0.055);
+
+    // Light mineral fleck
+    g.fillStyle(0xcccccc, 0.28);
+    for (const [sx, sy] of [[-0.18,0.22],[0.1,0.14],[-0.06,-0.3]])
+      g.fillCircle(cx + sx * r, cy + sy * r, r * 0.048);
+  }
+
   // Stripe: jewel with 3 glowing energy bars (H or V)
   _renderStripe(g, tile, cx, cy, r, shape, vertical) {
     const cs = TILE_COLORS[tile.color] || TILE_COLORS[0];
@@ -574,10 +644,8 @@ export default class Game extends Phaser.Scene {
   }
 
   _iconFor(tile) {
-    // Power specials have their own distinct renders — no badge needed
-    if (tile.type === TYPE.STONE) return '▪';
-    if (tile.type === TYPE.ICE)   return tile.iceHp === 2 ? '❄' : '·';
-    if (tile.type === TYPE.LAVA)  return '🔥';
+    if (tile.type === TYPE.ICE)  return tile.iceHp === 2 ? '❄' : '·';
+    if (tile.type === TYPE.LAVA) return '🔥';
     return null;
   }
 
